@@ -1,0 +1,28 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Backend runtime files
+backend/uploads/
+
+# Frontend dependencies and build output
+paper-ai-frontend/node_modules/
+paper-ai-frontend/dist/
+paper-ai-frontend/.vite/
+
+# Logs and local editor files
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
