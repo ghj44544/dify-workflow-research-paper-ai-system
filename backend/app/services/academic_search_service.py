@@ -4,16 +4,40 @@ from typing import Any
 import httpx
 
 
-KEYWORD_MAP = [
+DOMAIN_KEYWORD_MAP = [
     ("轴承故障", "bearing fault diagnosis"),
     ("故障诊断", "fault diagnosis"),
-    ("小样本", "few-shot fault diagnosis"),
-    ("迁移学习", "transfer learning fault diagnosis"),
     ("剩余寿命预测", "remaining useful life prediction"),
-    ("异常检测", "anomaly detection"),
     ("设备健康管理", "prognostics and health management"),
     ("PHM", "prognostics and health management"),
+    ("乒乓球", "table tennis"),
+    ("足球", "football"),
+    ("篮球", "basketball"),
+    ("羽毛球", "badminton"),
+    ("网球", "tennis"),
+    ("排球", "volleyball"),
+    ("运动康复", "sports rehabilitation"),
+    ("运动训练", "sports training"),
+    ("运动表现", "sports performance"),
+    ("生物力学", "biomechanics"),
+    ("计算机视觉", "computer vision"),
+    ("目标检测", "object detection"),
+    ("图像分割", "image segmentation"),
+]
+
+METHOD_KEYWORD_MAP = [
+    ("小样本", "few-shot learning"),
+    ("迁移学习", "transfer learning"),
+    ("异常检测", "anomaly detection"),
     ("深度学习", "deep learning"),
+    ("机器学习", "machine learning"),
+    ("强化学习", "reinforcement learning"),
+    ("动作识别", "action recognition"),
+    ("姿态估计", "pose estimation"),
+    ("轨迹预测", "trajectory prediction"),
+    ("可解释", "interpretable"),
+    ("多模态", "multimodal"),
+    ("综述", "review"),
 ]
 
 
@@ -23,14 +47,14 @@ class AcademicSearchError(RuntimeError):
 
 def build_search_query(message: str) -> str:
     matched_terms: list[str] = []
-    for keyword, term in KEYWORD_MAP:
+    for keyword, term in DOMAIN_KEYWORD_MAP + METHOD_KEYWORD_MAP:
         if keyword in message and term not in matched_terms:
             matched_terms.append(term)
 
     if not matched_terms:
         return message.strip()
 
-    # 去重保序，避免 fault diagnosis 重复太多影响检索。
+    # 去重保序，避免重复词影响 OpenAlex 检索。
     words: list[str] = []
     for term in matched_terms:
         for word in term.split():
