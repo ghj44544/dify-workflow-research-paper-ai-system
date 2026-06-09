@@ -114,6 +114,33 @@ class DifyService:
         raw_response = await self.run_workflow(api_key, inputs, user)
         return self._build_workflow_result(raw_response)
 
+    async def run_research_assistant_workflow(
+        self,
+        user_question: str,
+        search_results: list[dict[str, Any]],
+        search_topic: str,
+        recent_years: int,
+        user: str = "user_001",
+    ) -> str:
+        api_key = settings.dify_research_assistant_api_key
+        inputs = {
+            "user_question": user_question,
+            "search_topic": search_topic,
+            "search_source": "OpenAlex",
+            "recent_years": recent_years,
+            "search_results": json.dumps(search_results, ensure_ascii=False, default=str),
+        }
+        raw_response = await self.run_workflow(api_key, inputs, user)
+        outputs = self._extract_outputs(raw_response)
+        answer = outputs.get("answer") or outputs.get("text")
+        if answer is None:
+            answer = raw_response.get("answer")
+        if answer is None:
+            answer = raw_response.get("text")
+        if answer is None:
+            raise DifyAPIError(f"Dify 科研助手响应中未找到 outputs.answer 或 outputs.text：{raw_response}")
+        return str(answer)
+
     @staticmethod
     def _ensure_api_key(api_key: str) -> None:
         if not api_key:

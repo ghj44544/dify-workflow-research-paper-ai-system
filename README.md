@@ -1,6 +1,6 @@
 # 基于 Dify Workflow 的科研文献智能分析系统
 
-这是一个前后端分离的科研文献智能分析系统。系统使用 Vue 3 构建前端页面，FastAPI 提供后端接口，后端统一对接 Dify Workflow 完成论文信息抽取、论文问答和阅读笔记生成。
+这是一个前后端分离的科研文献智能分析系统。系统使用 Vue 3 构建前端页面，FastAPI 提供后端接口，后端统一对接 Dify Workflow 完成论文信息抽取、论文问答、阅读笔记生成和科研联网检索结果总结。
 
 前端不会直接调用 Dify，也不会保存任何 Dify API Key。所有 Dify 调用都由后端完成。
 
@@ -34,6 +34,7 @@ dify-workflow-research-paper-ai-system/
 - aiofiles
 - PyMySQL
 - MySQL
+- OpenAlex API
 
 智能工作流：
 
@@ -52,9 +53,9 @@ Vue 3 前端
    v
 FastAPI 后端
    |
-   | 保存上传文件、记录数据库、调用 Dify API
+   | 保存上传文件、记录数据库、调用 OpenAlex 和 Dify API
    v
-Dify Workflow
+OpenAlex / Dify Workflow
    |
    | 返回 Markdown 或结构化结果
    v
@@ -64,11 +65,12 @@ FastAPI 清洗结果并入库
 Vue 前端渲染 Markdown、表格和详情页
 ```
 
-三个 Dify Workflow 分工：
+四个 Dify Workflow 分工：
 
 - 文献信息抽取 Workflow：接收 `paper_file`，返回论文标题、作者、年份、关键词、研究问题、研究方法、数据集、指标、创新点、不足和结论。
 - 论文问答 Workflow：接收 `paper_file` 和 `question`，返回基于论文内容的回答。
 - 阅读笔记 Workflow：接收 `paper_file` 和 `note_style`，返回 Markdown 格式阅读笔记。
+- 科研联网搜索结果总结 Workflow：接收 `user_question`、`search_results`、`search_topic`、`search_source`、`recent_years`，返回中文科研助手回答。OpenAlex 检索由 FastAPI 完成，Dify 不直接联网。
 
 后端会先将本地论文上传到 Dify，得到 `upload_file_id`，再以单文件对象格式传给 Workflow：
 
@@ -89,6 +91,8 @@ Vue 前端渲染 Markdown、表格和详情页
 - 文献管理：展示论文列表、详情、删除操作。
 - 论文问答：围绕单篇论文提问，保存问答历史。
 - 阅读笔记：按研究生阅读笔记、开题报告、课堂汇报、文献综述等风格生成 Markdown 笔记。
+- 智能科研助手：根据用户科研问题调用 OpenAlex 检索近期文献，再调用 Dify 对搜索结果进行中文总结。
+- 论文收藏：科研助手检索结果支持收藏、查看和删除收藏论文。
 - Markdown 渲染：AI 回答和阅读笔记均使用 markdown-it 渲染。
 - 输出清洗：后端会清理模型输出中的 `<think>...</think>`，避免推理过程展示给用户。
 
@@ -122,6 +126,7 @@ DIFY_BASE_URL=http://localhost/v1
 DIFY_QA_API_KEY=你的论文问答WorkflowKey
 DIFY_EXTRACT_API_KEY=你的文献信息抽取WorkflowKey
 DIFY_NOTE_API_KEY=你的阅读笔记WorkflowKey
+DIFY_RESEARCH_ASSISTANT_API_KEY=你的科研助手总结WorkflowKey
 UPLOAD_DIR=uploads
 APP_NAME=科研文献智能分析系统
 DEBUG=true
@@ -197,6 +202,11 @@ VITE_API_BASE_URL=http://localhost:8000
 | GET | `/api/papers/{paper_id}/qa-records` | 获取问答历史 |
 | POST | `/api/papers/{paper_id}/note` | 生成阅读笔记 |
 | GET | `/api/papers/{paper_id}/notes` | 获取阅读笔记列表 |
+| POST | `/api/research-assistant/chat` | 智能科研助手对话，后端检索 OpenAlex 并调用 Dify 总结 |
+| GET | `/api/research-assistant/messages` | 获取科研助手对话历史 |
+| POST | `/api/research-assistant/save-paper` | 收藏检索论文 |
+| GET | `/api/research-assistant/saved-papers` | 获取收藏论文 |
+| DELETE | `/api/research-assistant/saved-papers/{paper_id}` | 删除收藏论文 |
 
 ## 常见问题
 
@@ -213,6 +223,15 @@ VITE_API_BASE_URL=http://localhost:8000
 ### 问答中出现 `{{question}}`
 
 说明 Dify Workflow 的 LLM 节点 Prompt 中变量没有正确引用。后端已经传入 `question`，需要在 Dify 节点中使用正确的变量选择器，而不是把 `{{question}}` 当普通文本写死。
+
+### 智能科研助手无法检索
+
+请检查：
+
+- 后端服务器能访问 `https://api.openalex.org/works`。
+- `.env` 已填写 `DIFY_RESEARCH_ASSISTANT_API_KEY`。
+- 科研助手 Dify Workflow 的 Start 变量名为 `user_question`、`search_results`、`search_topic`、`search_source`、`recent_years`。
+- Dify Workflow 输出变量名为 `answer`。
 
 ### 为什么不提交 `.env`、`node_modules`、`uploads`
 

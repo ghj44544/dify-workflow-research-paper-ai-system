@@ -1,12 +1,13 @@
 # 基于 Dify Workflow 的科研文献智能分析系统 - 后端
 
-这是一个 FastAPI 后端项目，用于对接已经在 Dify 中配置好的 3 个 Workflow：
+这是一个 FastAPI 后端项目，用于对接已经在 Dify 中配置好的 4 个 Workflow：
 
 - 科研文献问答助手
 - 文献信息抽取助手
 - 论文阅读笔记生成助手
+- 科研联网搜索结果总结助手
 
-后端负责论文文件上传、本地保存、调用 Dify Workflow、MySQL 数据持久化、问答历史和阅读笔记管理。
+后端负责论文文件上传、本地保存、调用 OpenAlex 检索近期文献、调用 Dify Workflow、MySQL 数据持久化、问答历史、阅读笔记、科研助手对话和收藏论文管理。
 
 ## 目录结构
 
@@ -21,13 +22,16 @@ backend/
       paper.py
       qa_record.py
       paper_note.py
+      research_assistant.py
       workflow_log.py
     schemas/
       paper.py
       qa_record.py
       paper_note.py
+      research_assistant.py
       common.py
     services/
+      academic_search_service.py
       dify_service.py
       paper_service.py
     api/
@@ -35,6 +39,7 @@ backend/
         paper_routes.py
         qa_routes.py
         note_routes.py
+        research_assistant.py
         health_routes.py
     utils/
       file_utils.py
@@ -74,6 +79,7 @@ DIFY_BASE_URL=http://localhost/v1
 DIFY_QA_API_KEY=你的论文问答WorkflowKey
 DIFY_EXTRACT_API_KEY=你的文献信息抽取WorkflowKey
 DIFY_NOTE_API_KEY=你的阅读笔记WorkflowKey
+DIFY_RESEARCH_ASSISTANT_API_KEY=你的科研助手总结WorkflowKey
 UPLOAD_DIR=uploads
 APP_NAME=科研文献智能分析系统
 DEBUG=true
@@ -89,7 +95,7 @@ CREATE DATABASE IF NOT EXISTS paper_ai_system
   DEFAULT COLLATE utf8mb4_unicode_ci;
 ```
 
-应用启动时会自动创建 `paper`、`qa_record`、`paper_note`、`workflow_log` 表。
+应用启动时会自动创建 `paper`、`qa_record`、`paper_note`、`workflow_log`、`research_chat_message`、`research_search_result`、`research_saved_paper` 表。
 
 ## 启动命令
 
@@ -115,6 +121,11 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 | GET | `/api/papers/{paper_id}/qa-records` | 获取问答历史 |
 | POST | `/api/papers/{paper_id}/note` | 生成论文阅读笔记 |
 | GET | `/api/papers/{paper_id}/notes` | 获取阅读笔记列表 |
+| POST | `/api/research-assistant/chat` | 智能科研助手对话 |
+| GET | `/api/research-assistant/messages` | 获取科研助手对话历史 |
+| POST | `/api/research-assistant/save-paper` | 收藏检索论文 |
+| GET | `/api/research-assistant/saved-papers` | 获取收藏论文 |
+| DELETE | `/api/research-assistant/saved-papers/{paper_id}` | 删除收藏论文 |
 
 问答请求示例：
 
@@ -139,6 +150,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 - 文献问答：`paper_file`、`question`
 - 信息抽取：`paper_file`
 - 阅读笔记：`paper_file`、`note_style`
+- 科研助手总结：`user_question`、`search_results`、`search_topic`、`search_source`、`recent_years`
 
 后端会先调用 `/files/upload` 上传文件，再调用 `/workflows/run`，文件输入格式为：
 
@@ -155,6 +167,8 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ## 常见问题排查
 
 - `Dify API Key 未配置`：检查 `.env` 中 3 个 `DIFY_*_API_KEY` 是否已填写。
+- `Dify 科研助手响应中未找到 outputs.answer`：检查科研助手 Workflow 输出变量是否命名为 `answer`。
+- `OpenAlex 检索失败`：检查后端网络是否能访问 OpenAlex。
 - `Dify 文件上传失败`：检查 `DIFY_BASE_URL`、Dify 服务地址、Workflow Key 权限和文件大小限制。
 - `paper_id 不存在`：确认先调用上传接口，或通过 `/api/papers` 查看已有论文 ID。
 - `本地文件不存在`：数据库中有记录，但 `uploads` 下文件被移动或删除了。
@@ -169,6 +183,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 - `app/models/`：数据库 ORM 模型。
 - `app/schemas/`：Pydantic 请求和响应结构。
 - `app/services/dify_service.py`：Dify 文件上传和 Workflow 调用封装。
+- `app/services/academic_search_service.py`：OpenAlex 检索、关键词映射和摘要还原。
 - `app/services/paper_service.py`：论文、问答、笔记和 workflow 日志业务逻辑。
 - `app/api/routes/`：HTTP API 路由。
 - `app/utils/file_utils.py`：上传文件校验、保存和删除。
@@ -178,6 +193,6 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 1. 创建 MySQL 数据库。
 2. 安装 Python 依赖。
 3. 复制 `.env.example` 为 `.env`。
-4. 在 `.env` 中配置数据库连接和 3 个 Dify Workflow API Key。
+4. 在 `.env` 中配置数据库连接和 4 个 Dify Workflow API Key。
 5. 执行 `uvicorn app.main:app --reload --host 0.0.0.0 --port 8000`。
 6. 打开 `http://localhost:8000/docs` 测试接口。

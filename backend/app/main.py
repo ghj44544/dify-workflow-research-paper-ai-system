@@ -3,7 +3,13 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.routes import health_routes, note_routes, paper_routes, qa_routes
+from app.api.routes import (
+    health_routes,
+    note_routes,
+    paper_routes,
+    qa_routes,
+    research_assistant,
+)
 from app.core.config import settings
 from app.core.database import init_db
 from app.schemas.common import error_response
@@ -59,3 +65,4 @@ app.include_router(health_routes.router)
 app.include_router(paper_routes.router)
 app.include_router(qa_routes.router)
 app.include_router(note_routes.router)
+app.include_router(research_assistant.router)

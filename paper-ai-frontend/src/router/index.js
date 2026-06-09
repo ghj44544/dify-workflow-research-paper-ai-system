@@ -25,6 +25,11 @@ const routes = [
     path: '/papers/:id/notes',
     name: 'paper-notes',
     component: () => import('../views/PaperNoteView.vue')
+  },
+  {
+    path: '/assistant',
+    name: 'research-assistant',
+    component: () => import('../views/ResearchAssistantView.vue')
   }
 ]
 

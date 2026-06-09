@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     dify_qa_api_key: str = Field(default="", alias="DIFY_QA_API_KEY")
     dify_extract_api_key: str = Field(default="", alias="DIFY_EXTRACT_API_KEY")
     dify_note_api_key: str = Field(default="", alias="DIFY_NOTE_API_KEY")
+    dify_research_assistant_api_key: str = Field(
+        default="", alias="DIFY_RESEARCH_ASSISTANT_API_KEY"
+    )
 
     upload_dir: str = Field(default="uploads", alias="UPLOAD_DIR")
 
